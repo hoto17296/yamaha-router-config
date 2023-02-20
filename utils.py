@@ -26,26 +26,27 @@ class YamahaRouterConfigBuilder:
     def build(self) -> str:
         commands = []
 
-        # IPv4 static filter
-        ip_filter_table = convert_filter_table([c.ip_filter_list for c in self.command_list], 1000)
-        for filter_def, filter_num in ip_filter_table.items():
-            commands.append(f"ip filter {filter_num} {filter_def}")
-        # IPv4 dynamic filter
-        ip_dynamic_filter_table = convert_filter_table([c.ip_dynamic_filter_list for c in self.command_list], 1000)
-        for filter_def, filter_num in ip_dynamic_filter_table.items():
-            commands.append(f"ip filter dynamic {filter_num} {filter_def}")
-        # IPv6 static filter
-        ipv6_filter_table = convert_filter_table([c.ipv6_filter_list for c in self.command_list], 1000)
-        for filter_def, filter_num in ipv6_filter_table.items():
-            commands.append(f"ipv6 filter {filter_num} {filter_def}")
-        # IPv6 dynamic filter
-        ipv6_dynamic_filter_table = convert_filter_table([c.ipv6_dynamic_filter_list for c in self.command_list], 1000)
-        for filter_def, filter_num in ipv6_dynamic_filter_table.items():
-            commands.append(f"ipv6 filter dynamic {filter_num} {filter_def}")
+        filter_types: list[(str, bool, int)] = [
+            ("ip", False, 1000),
+            ("ip", True, 2000),
+            ("ipv6", False, 3000),
+            ("ipv6", True, 4000),
+        ]
+        filter_tables = {}
+        for proto, dynamic, filter_num_base in filter_types:
+            items = [getattr(c, f"{proto}{'_dynamic' if dynamic else ''}_filter_list") for c in self.command_list]
+            uniq_items = dict.fromkeys(sum(items, [])).keys()
+            filter_tables[(proto, dynamic)] = {item: str(filter_num_base + idx) for idx, item in enumerate(uniq_items)}
+            for filter_def, filter_num in filter_tables[(proto, dynamic)].items():
+                commands.append(f"{proto} filter{' dynamic' if dynamic else ''} {filter_num} {filter_def}")
 
         for c in self.command_list:
             command = c.command
-            for f in c.ip_filter_list:
-                command += f" {ip_filter_table[f]}"
+
+            for proto, dynamic, filter_num_base in filter_types:
+                for f in getattr(c, f"{proto}{'_dynamic' if dynamic else ''}_filter_list"):
+                    command += f" {filter_tables[(proto, dynamic)][f]}"
+
             commands.append(command)
+
         return "\n".join(commands)
