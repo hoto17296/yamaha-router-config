@@ -35,7 +35,12 @@ config.add("user attribute login-timer=3600")
 
 # IPv4 設定
 with config.ip_route("default") as route:
-    route.gateway(f"tunnel {MAP_E_TUNNEL_ID}")
+    route.gateway(
+        f"tunnel {MAP_E_TUNNEL_ID}",
+        filters=[
+            "restrict * * * * *",  # すべてのパケットをこちらに通す
+        ],
+    )
     route.gateway(f"pp 1")
 config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
 
