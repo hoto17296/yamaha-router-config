@@ -36,6 +36,7 @@ config.add("user attribute login-timer=3600")
 # IPv4 設定
 with config.ip_route("default") as route:
     route.gateway(f"tunnel {MAP_E_TUNNEL_ID}")
+    route.gateway(f"pp 1")
 config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
 
 # IPv6 設定
@@ -205,6 +206,9 @@ config.add(f"dns service fallback on")
 config.add(f"dns server dhcp {WAN_IF} edns=on")
 config.add(f"dns private address spoof on")
 config.add(f"dns private name setup.netvolante.jp")
+
+# DDNS 設定
+config.add(f"netvolante-dns hostname host pp server=1 hotolab.aa0.netvolante.jp")
 
 # 毎日6時に時刻同期する
 config.add("schedule at 1 */* 06:00:00 * ntpdate ntp.nict.jp syslog")
