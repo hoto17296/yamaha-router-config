@@ -9,13 +9,17 @@ LAN_ADDR = IPv4Addr("192.168.57.0/24")
 
 LAN_IF = "lan1"
 WAN_IF = "onu1"
+
 IPV6_PREFIX_ID = 1
 
-MAP_E_TUNNEL_ID = 1
+# トンネル ID
+IPIP6_TUNNEL_ID = 1
 
+# NAT ディスクリプタ
 MAP_E_NAT_DESCRIPTOR = 1
 PPPOE_NAT_DESCRIPTOR = 2
 
+# DHCP 固定割り当てテーブル
 DHCP_STATIC_TABLE: list[tuple[int, str]] = [
     (2, "ac:44:f2:aa:6f:61"),
     (3, "f0:9f:c2:73:2a:26"),
@@ -34,7 +38,7 @@ config.add(f"administrator password {ENV.ADMIN_PASSWORD}")
 # ログインセッションの期限を1時間に設定
 config.add("user attribute login-timer=3600")
 
-# IPv4 設定
+# IPv4 デフォルト経路設定
 with config.ip_route("default") as route:
     # VPN 通信は PPPoE に流す
     # route.gateway(
@@ -46,25 +50,41 @@ with config.ip_route("default") as route:
     #     ],
     # )
     # それ以外は MAP-E トンネルに流す
-    route.gateway(f"tunnel {MAP_E_TUNNEL_ID}")
-config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
-config.add(f"ip {LAN_IF} proxyarp on")  # 外 (VPN) からアクセスがあった時に応答出来るよう代理 ARP を有効化 (よくわかってない)
+    route.gateway(f"tunnel {IPIP6_TUNNEL_ID}")
 
-# IPv6 設定
+# LAN インタフェースの IPv4 アドレスの設定
+config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
+
+# 外 (VPN) からアクセスがあった時に応答出来るよう代理 ARP を有効化 (よくわかってない)
+config.add(f"ip {LAN_IF} proxyarp on")
+
+# IPv6 デフォルト経路設定
 with config.ipv6_route("default") as route:
     route.gateway(f"dhcp {WAN_IF}")
-config.add(f"ipv6 prefix {IPV6_PREFIX_ID} dhcp-prefix@{WAN_IF}::/64")
+
+# LAN インタフェースの IPv6 アドレスの設定
 config.add(f"ipv6 {LAN_IF} address dhcp-prefix@{WAN_IF}::1/64")
+
+# ルーター広告する IPv6 プレフィックスの設定
+config.add(f"ipv6 prefix {IPV6_PREFIX_ID} dhcp-prefix@{WAN_IF}::/64")
+
+# ルーター広告の設定
+# o_flag=on: アドレス以外の情報をホストに自動取得させる (ゲートウェイとか？？よくわかってない)
 config.add(f"ipv6 {LAN_IF} rtadv send {IPV6_PREFIX_ID} o_flag=on")
+
+# LAN 方向に DHCPv6 サーバとして動作させる
 config.add(f"ipv6 {LAN_IF} dhcp service server")
 
-# LAN 側で L2MS を有効にする (配下の YAMAHA 機器を管理する機能)
-config.add(f"switch control use {LAN_IF} on terminal=on")
-
-# IPoE 設定
+# WAN インタフェースの名前を設定
 config.add(f"description {WAN_IF} OCN")
+
+# WAN インタフェースの IPv4 アドレスは DHCP で取得する
 config.add(f"ip {WAN_IF} address dhcp")
+
+# WAN インタフェースの IPv6 アドレスは DHCP で取得する
 config.add(f"ipv6 {WAN_IF} address dhcp")
+
+# WAN インタフェースのフィルタリング設定 (IN)
 config.ipv6_filter(
     WAN_IF,
     "in",
@@ -75,6 +95,8 @@ config.ipv6_filter(
         "pass * * 4",
     ],
 )
+
+# WAN インタフェースのフィルタリング設定 (OUT)
 config.ipv6_filter(
     WAN_IF,
     "out",
@@ -86,14 +108,26 @@ config.ipv6_filter(
         "* * udp",
     ],
 )
+
+# WAN 方向に DHCPv6 クライアントとして動作させる
 config.add(f"ipv6 {WAN_IF} dhcp service client")
+
+# NGN 網に接続する
 config.add(f"ngn type {WAN_IF} ntt")
 
-# IPv4 over IPv6 の設定
-with config.interface("tunnel", MAP_E_TUNNEL_ID):
+# IPv4 over IPv6 トンネルの設定
+with config.interface("tunnel", IPIP6_TUNNEL_ID):
+
+    # トンネルの種別を MAP-E として設定
     config.add("tunnel encapsulation map-e")
+
+    # MAP-E の種別を OCN バーチャルコネクトとして設定
     config.add("tunnel map-e type ocn")
+
+    # MTU 設定
     config.add("ip tunnel mtu 1460")
+
+    # トンネルインタフェースのフィルタリング設定 (IN)
     config.ip_filter(
         "tunnel",
         "in",
@@ -109,6 +143,8 @@ with config.interface("tunnel", MAP_E_TUNNEL_ID):
             f"pass {LAN_ADDR} tcp * ident",
         ],
     )
+
+    # トンネルインタフェースのフィルタリング設定 (OUT)
     config.ip_filter(
         "tunnel",
         "out",
@@ -217,6 +253,9 @@ config.add(f"dns service fallback on")
 config.add(f"dns server dhcp {WAN_IF} edns=on")
 config.add(f"dns private address spoof on")
 config.add(f"dns private name setup.netvolante.jp")
+
+# L2MS を有効にする (配下の YAMAHA 機器を管理する機能)
+config.add(f"switch control use {LAN_IF} on terminal=on")
 
 # DDNS 設定
 config.add(f"netvolante-dns hostname host pp server=1 {ENV.HOSTNAME}")

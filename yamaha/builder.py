@@ -26,11 +26,19 @@ class YamahaRouterConfigBuilder:
         self.commands.append(FilterCommand(self.filters, "ipv6", interface, direction, static, dynamic))
 
     def ip_route(self, network: str):
+        """
+        IP の経路情報の設定
+        http://www.rtpro.yamaha.co.jp/RT/manual/rt-common/ip/ip_route.html
+        """
         route = RouteCommand(self.filters, "ip", network)
         self.commands.append(route)
         return route
 
     def ipv6_route(self, network: str):
+        """
+        IPv6 の経路情報の設定
+        http://www.rtpro.yamaha.co.jp/RT/manual/rt-common/ipv6/ipv6_route.html
+        """
         route = RouteCommand(self.filters, "ipv6", network)
         self.commands.append(route)
         return route
