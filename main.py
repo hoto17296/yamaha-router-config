@@ -27,7 +27,9 @@ DHCP_STATIC_TABLE: list[tuple[int, str]] = [
     (100, "3c:f8:62:49:66:c8"),
 ]
 
-# VPN_PSK = getenv("VPN_PSK", "xxxx")
+# ログインパスワード設定
+config.add(f"login password {ENV.USER_PASSWORD}")
+config.add(f"administrator password {ENV.ADMIN_PASSWORD}")
 
 # ログインセッションの期限を1時間に設定
 config.add("user attribute login-timer=3600")
@@ -237,7 +239,7 @@ config.add("statistics traffic on")
 #     config.add(f"ipsec ike keepalive use {GW_ID} on rfc4306 10 3")
 #     config.add(f"ipsec ike local name {GW_ID} {ENV.HOSTNAME} fqdn")
 #     config.add(f"ipsec ike nat-traversal {GW_ID} on")
-#     config.add(f"ipsec ike pre-shared-key {GW_ID} text {VPN_PSK}")
+#     config.add(f"ipsec ike pre-shared-key {GW_ID} text {ENV.VPN_PSK}")
 #     config.add(f"ipsec ike remote name {GW_ID} hoto fqdn")
 #     config.add(f"ipsec ike mode-cfg address {GW_ID} 1")
 #     config.add(f"ipsec auto refresh {GW_ID} off")
