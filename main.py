@@ -10,22 +10,7 @@ LAN_ADDR = IPv4Addr("192.168.57.0/24")
 LAN_IF = "lan1"
 WAN_IF = "onu1"
 
-IPV6_PREFIX_ID = 1
-
-# トンネル ID
 IPIP6_TUNNEL_ID = 1
-
-# DHCP 固定割り当てテーブル
-DHCP_STATIC_TABLE: list[tuple[int, str]] = [
-    (2, "ac:44:f2:aa:6f:61"),
-    (3, "f0:9f:c2:73:2a:26"),
-    (4, "94:83:c4:03:83:46"),
-    (6, "38:9d:92:bc:e0:cf"),
-    (7, "00:01:2e:71:c4:cf"),
-    (8, "00:11:32:71:e5:07"),
-    (9, "1c:69:7a:6a:66:8f"),
-    (100, "3c:f8:62:49:66:c8"),
-]
 
 with config.section("User"):
     # ログインパスワード設定
@@ -33,7 +18,7 @@ with config.section("User"):
     config.add(f"administrator password {ENV.ADMIN_PASSWORD}")
 
     # ログインセッションの期限を1時間に設定
-    config.add("user attribute login-timer=3600")
+    config.add(f"user attribute login-timer={60 * 60}")
 
 with config.section("IPv4"):
     # IPv4 デフォルト経路設定
@@ -57,6 +42,8 @@ with config.section("IPv4"):
     config.add(f"ip {LAN_IF} proxyarp on")
 
 with config.section("IPv6"):
+    IPV6_PREFIX_ID = 1
+
     # IPv6 デフォルト経路設定
     with config.ipv6_route("default") as route:
         route.gateway(f"dhcp {WAN_IF}")
@@ -75,7 +62,7 @@ with config.section("IPv6"):
     config.add(f"ipv6 {LAN_IF} dhcp service server")
 
     # WAN インタフェースの名前を設定
-    config.add(f"description {WAN_IF} OCN")
+    config.add(f"description {WAN_IF} {ENV.IPOE_DESCRIPTION}")
 
     # WAN インタフェースの IPv4 アドレスは DHCP で取得する
     config.add(f"ip {WAN_IF} address dhcp")
@@ -234,7 +221,20 @@ with config.section("DHCP"):
     # DHCP サーバ設定
     config.add(f"dhcp service server")
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
-    config.add(f"dhcp scope 1 {LAN_ADDR(2)}-{LAN_ADDR(239)}/{LAN_ADDR.prefix()}")
+    config.add(f"dhcp scope 1 {LAN_ADDR.range(2, 239)}")
+
+    # DHCP 固定割り当てテーブル
+    DHCP_STATIC_TABLE: list[tuple[int, str]] = [
+        (2, "ac:44:f2:aa:6f:61"),
+        (3, "f0:9f:c2:73:2a:26"),
+        (4, "94:83:c4:03:83:46"),
+        (6, "38:9d:92:bc:e0:cf"),
+        (7, "00:01:2e:71:c4:cf"),
+        (8, "00:11:32:71:e5:07"),
+        (9, "1c:69:7a:6a:66:8f"),
+        (100, "3c:f8:62:49:66:c8"),
+    ]
+
     for n, macaddr in DHCP_STATIC_TABLE:
         config.add(f"dhcp scope bind 1 {LAN_ADDR(n)} {macaddr}")
 
@@ -285,7 +285,7 @@ with config.section("Other"):
 #     config.add(f"ipsec ike remote name {GW_ID} hoto fqdn")
 #     config.add(f"ipsec ike mode-cfg address {GW_ID} 1")
 #     config.add(f"ipsec auto refresh {GW_ID} off")
-# config.add(f"ipsec ike mode-cfg address pool 1 {LAN_ADDR(240)}-{LAN_ADDR(254)}/{LAN_ADDR.prefix()}")
+# config.add(f"ipsec ike mode-cfg address pool 1 {LAN_ADDR.range(240, 254)}")
 
 if __name__ == "__main__":
     print(config.build())

@@ -31,6 +31,9 @@ class IPv4Addr:
     def prefix(self) -> int:
         return bin(self.mask).count("1")
 
+    def range(self, min: int, max: int) -> str:
+        return f"{self(min)}-{self(max)}/{self.prefix()}"
+
 
 def cidr2int(cidr: str) -> tuple[int, int]:
     cidr = cidr.split("/", 1)
