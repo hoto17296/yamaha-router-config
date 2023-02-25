@@ -5,7 +5,7 @@ from .filter import Filter
 
 class YamahaRouterCommand(metaclass=ABCMeta):
     @abstractmethod
-    def build(self, filter_tables: dict[str, dict[str, str]]) -> str:
+    def build(self, filter_tables: dict[str, dict[str, str]]) -> list[str]:
         raise NotImplementedError
 
 
@@ -14,7 +14,7 @@ class BasicCommand(YamahaRouterCommand):
         self.command = command
 
     def build(self, filter_tables):
-        return self.command
+        return [self.command]
 
 
 class FilterCommand(YamahaRouterCommand):
@@ -43,7 +43,7 @@ class FilterCommand(YamahaRouterCommand):
             command += " dynamic"
         for filter_def in self.dynamic_filters:
             command += f" {filter_tables[f'{self.proto}_dynamic_filter'][filter_def]}"
-        return command
+        return [command]
 
 
 class RouteCommand(YamahaRouterCommand):
@@ -72,7 +72,7 @@ class RouteCommand(YamahaRouterCommand):
         command = f"{self.proto} route {self.network}"
         for gateway in self.gateways:
             command += f" {gateway.build(filter_tables)}"
-        return command
+        return [command]
 
 
 class Gateway:
@@ -83,15 +83,15 @@ class Gateway:
         self.parameters: dict[str, Any] = kwargs
 
     def build(self, filter_tables: dict[str, dict[str, str]]) -> str:
-        command = f"gateway {self.gateway}"
+        option = f"gateway {self.gateway}"
         if len(self.filters) > 0:
-            command += " filter"
+            option += " filter"
         for filter_def in self.filters:
-            command += f" {filter_tables[f'{self.proto}_filter'][filter_def]}"
+            option += f" {filter_tables[f'{self.proto}_filter'][filter_def]}"
         for key, val in self.parameters.items():
             if type(val) is bool:
                 if val:
-                    command += f" {key}"
+                    option += f" {key}"
             else:
-                command += f" {key} {val}"
-        return command
+                option += f" {key} {val}"
+        return option

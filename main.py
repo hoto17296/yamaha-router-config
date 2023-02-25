@@ -15,10 +15,6 @@ IPV6_PREFIX_ID = 1
 # トンネル ID
 IPIP6_TUNNEL_ID = 1
 
-# NAT ディスクリプタ
-MAP_E_NAT_DESCRIPTOR = 1
-PPPOE_NAT_DESCRIPTOR = 2
-
 # DHCP 固定割り当てテーブル
 DHCP_STATIC_TABLE: list[tuple[int, str]] = [
     (2, "ac:44:f2:aa:6f:61"),
@@ -165,7 +161,10 @@ with config.interface("tunnel", IPIP6_TUNNEL_ID):
             "* * udp",
         ],
     )
-    config.add(f"ip tunnel nat descriptor {MAP_E_NAT_DESCRIPTOR}")
+
+    with config.nat("tunnel", "masquerade") as nat:
+        nat.add(f"nat descriptor address outer {nat.descriptor} map-e")
+
 
 # PPPoE の設定
 with config.interface("pp", 1):
@@ -219,17 +218,11 @@ with config.interface("pp", 1):
             "* * udp",
         ],
     )
-    config.add(f"ip pp nat descriptor {PPPOE_NAT_DESCRIPTOR}")
 
-# NAT (1)
-config.add(f"nat descriptor type {MAP_E_NAT_DESCRIPTOR} masquerade")
-config.add(f"nat descriptor address outer {MAP_E_NAT_DESCRIPTOR} map-e")
-
-# NAT (2)
-config.add(f"nat descriptor type {PPPOE_NAT_DESCRIPTOR} masquerade")
-# config.add(f"nat descriptor masquerade static {PPPOE_NAT_DESCRIPTOR} 1 {LAN_ADDR(1)} esp")  # VPN 用
-# config.add(f"nat descriptor masquerade static {PPPOE_NAT_DESCRIPTOR} 2 {LAN_ADDR(1)} udp 500")  # VPN 用
-# config.add(f"nat descriptor masquerade static {PPPOE_NAT_DESCRIPTOR} 3 {LAN_ADDR(1)} udp 4500")  # VPN 用
+    with config.nat("pp", "masquerade") as nat:
+        nat.add(f"nat descriptor masquerade static {nat.descriptor} 1 {LAN_ADDR(1)} esp")  # VPN 用
+        nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")  # VPN 用
+        nat.add(f"nat descriptor masquerade static {nat.descriptor} 3 {LAN_ADDR(1)} udp 4500")  # VPN 用
 
 # Syslog を NAS に保存
 config.add(f"syslog host 192.168.57.8")

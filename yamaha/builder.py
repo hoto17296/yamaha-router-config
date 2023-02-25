@@ -2,6 +2,14 @@ from contextlib import contextmanager
 from typing import Literal
 from .command import YamahaRouterCommand, BasicCommand, FilterCommand, RouteCommand
 from .filter import Filter
+from .nat import Nat
+
+
+def counter(initial: int = 0):
+    n = initial
+    while True:
+        yield n
+        n += 1
 
 
 class YamahaRouterConfigBuilder:
@@ -15,6 +23,8 @@ class YamahaRouterConfigBuilder:
             "ipv6_filter": Filter("ipv6", False, 3000),
             "ipv6_dynamic_filter": Filter("ipv6", True, 4000),
         }
+        self.nat_descriptor_counter = counter(1)
+        self.nat_descriptions: list[Nat] = []
 
     def add(self, command):
         self.commands.append(BasicCommand(command))
@@ -44,12 +54,19 @@ class YamahaRouterConfigBuilder:
         return route
 
     @contextmanager
-    def interface(self, interface: str, id: int):
+    def interface(self, interface: str, id: str):
         self.add(f"{interface} select {id}")
         try:
             yield
         finally:
             self.add(f"{interface} enable {id}")
+
+    @contextmanager
+    def nat(self, interface: str, type: str = "none"):
+        nat = Nat(next(self.nat_descriptor_counter), type)
+        self.nat_descriptions.append(nat)
+        self.add(f"ip {interface} nat descriptor {nat.descriptor}")
+        yield nat
 
     def build(self) -> str:
         commands = [
@@ -63,7 +80,10 @@ class YamahaRouterConfigBuilder:
             commands += filter.build_commands()
             filter_tables[name] = filter.build_table()
 
+        for nat_description in self.nat_descriptions:
+            commands += nat_description.commands
+
         for command in self.commands:
-            commands.append(command.build(filter_tables))
+            commands += command.build(filter_tables)
 
         return "\n".join(commands)
