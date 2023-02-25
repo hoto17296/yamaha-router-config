@@ -1,3 +1,19 @@
+class Env:
+    def __init__(self, filename):
+        with open(filename) as f:
+            for line in f:
+                # コメントを削除
+                line = line.split("#", 1)[0]
+                # 空行はスキップ
+                if len(line.strip()) == 0:
+                    continue
+                key, value = line.split("=", 1)
+                self.__dict__[key.strip()] = value.strip()
+
+    def __call__(self, key: str, default: str = None) -> str:
+        return self.__dict__.get(key, default)
+
+
 class IPv4Addr:
     def __init__(self, cidr: str):
         self.addr, self.mask = cidr2int(cidr)
