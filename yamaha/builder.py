@@ -26,6 +26,11 @@ class YamahaRouterConfigBuilder:
         self.nat_descriptor_counter = counter(1)
         self.nat_descriptions: list[Nat] = []
 
+    @contextmanager
+    def section(self, title: str):
+        self.add(f"\n# {title}")
+        yield
+
     def add(self, command):
         self.commands.append(BasicCommand(command))
 
@@ -75,11 +80,15 @@ class YamahaRouterConfigBuilder:
             "# See also: https://github.com/hoto17296/yamaha-router-config",
         ]
 
+        if len(self.filters) > 0:
+            commands.append("\n# Filter")
         filter_tables = {}
         for name, filter in self.filters.items():
             commands += filter.build_commands()
             filter_tables[name] = filter.build_table()
 
+        if len(self.nat_descriptions) > 0:
+            commands.append("\n# NAT")
         for nat_description in self.nat_descriptions:
             commands += nat_description.commands
 
