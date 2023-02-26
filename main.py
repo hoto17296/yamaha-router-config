@@ -71,6 +71,9 @@ with config.section("WAN"):
     # WAN インタフェースの IPv6 アドレスは DHCP で取得する
     config.add(f"ipv6 {WAN_IF} address dhcp")
 
+    # インタフェースがリンクダウンした際に DHCP サーバから得ていた情報をリリースする
+    config.add(f"dhcp client release linkdown on")
+
     # NGN 網に接続する
     config.add(f"ngn type {WAN_IF} ntt")
 
@@ -158,7 +161,10 @@ with config.section("IPIP6"):
             ],
         )
 
+        # NAT 設定
         with config.nat("tunnel", "masquerade") as nat:
+
+            # NAT 時の外側アドレスは MAP-E で自動生成されたアドレスを使う
             nat.add(f"nat descriptor address outer {nat.descriptor} map-e")
 
 # PPPoE 設定
@@ -166,20 +172,39 @@ with config.section("PPPoE"):
     with config.interface("pp", 1):
         config.add(f"description pp {ENV.PPPOE_DESCRIPTION}")
         config.add("pp keepalive interval 30 retry-interval=30 count=12")
+
+        # 常時接続する
         config.add("pp always-on on")
+
+        # WAN インタフェースを使用
         config.add(f"pppoe use {WAN_IF}")
+
+        # PPPoE セッションを自動切断しない
         config.add("pppoe auto disconnect off")
+
+        # 認証タイプとして PAP と CHAP を受け入れる
         config.add("pp auth accept pap chap")
+
+        # 認証情報
         config.add(f"pp auth myname {ENV.PPPOE_USERNAME} {ENV.PPPOE_PASSWORD}")
+
+        # MRU の設定
         config.add("ppp lcp mru on 1454")
+
+        # 接続相手と IP アドレスのネゴシエーションをする
         config.add("ppp ipcp ipaddress on")
+
+        # IPCP の MS 拡張オプションを使う (DNS サーバアドレスを受け取れるようにする)
         config.add("ppp ipcp msext on")
+
+        # パケットを圧縮しない
         config.add("ppp ccp type none")
 
         # 不正アクセスを検知したらパケットを drop する
         config.add("ip pp intrusion detection in on reject=on")
         config.add("ip pp intrusion detection out on reject=on")
 
+        # PP インタフェースのフィルタリング設定 (IN)
         config.ip_filter(
             "pp",
             "in",
@@ -199,6 +224,8 @@ with config.section("PPPoE"):
                 # f"pass * * udp * 4500",
             ],
         )
+
+        # PP インタフェースのフィルタリング設定 (OUT)
         config.ip_filter(
             "pp",
             "out",
@@ -220,43 +247,50 @@ with config.section("PPPoE"):
             ],
         )
 
+        # NAT 設定
         with config.nat("pp", "masquerade") as nat:
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 1 {LAN_ADDR(1)} esp")  # VPN 用
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")  # VPN 用
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 3 {LAN_ADDR(1)} udp 4500")  # VPN 用
+
+            # VPN 通信ではポート番号変換を行わない
+            nat.add(f"nat descriptor masquerade static {nat.descriptor} 1 {LAN_ADDR(1)} esp")
+            nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")
+            nat.add(f"nat descriptor masquerade static {nat.descriptor} 3 {LAN_ADDR(1)} udp 4500")
 
     # DDNS 設定
     config.add(f"netvolante-dns hostname host pp server=1 {ENV.HOSTNAME}")
 
 # DHCP 設定
 with config.section("DHCP"):
-    # DHCP サーバ設定
+    DHCP_SCOPE = 1
+
+    # DHCP サーバを動作させる設定
     config.add(f"dhcp service server")
+
+    # DHCP で払い出すアドレス範囲の設定
+    config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 239)}")
+
+    # クライアント識別に Client-Identifier を使用しない
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
-    config.add(f"dhcp scope 1 {LAN_ADDR.range(2, 239)}")
 
-    # DHCP 固定割り当てテーブル
-    DHCP_STATIC_TABLE: list[tuple[int, str]] = [
-        (2, "ac:44:f2:aa:6f:61"),  # WLX212 クラスタ 仮想 NIC
-        (6, "38:9d:92:bc:e0:cf"),  # プリンタ
-        (7, "00:01:2e:71:c4:cf"),  # サーバ (ZBOX)
-        (8, "00:11:32:71:e5:07"),  # NAS
-        (9, "1c:69:7a:6a:66:8f"),  # サーバ (NUC)
-    ]
-
-    for n, macaddr in DHCP_STATIC_TABLE:
-        config.add(f"dhcp scope bind 1 {LAN_ADDR(n)} {macaddr}")
-
-    # DHCP クライアント設定
-    config.add(f"dhcp client release linkdown on")
+    # DHCP 固定割り当て
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(2)} ac:44:f2:aa:6f:61")  # WLX212 クラスタ 仮想 NIC
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 38:9d:92:bc:e0:cf")  # プリンタ
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(7)} 00:01:2e:71:c4:cf")  # サーバ (ZBOX)
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(8)} 00:11:32:71:e5:07")  # NAS
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(9)} 1c:69:7a:6a:66:8f")  # サーバ (NUC)
 
 # DNS 設定
 with config.section("DNS"):
+    # LAN からの DNS アクセスを許可する
     config.add(f"dns host {LAN_IF}")
+
+    # 名前解決は IPv6 を優先し、IPv6 で名前解決できない場合に IPv4 へフォールバックする
     config.add(f"dns service fallback on")
+
+    # WAN の DHCP から DNS サーバのアドレスを取得して問い合わせに使用する
     config.add(f"dns server dhcp {WAN_IF} edns=on")
+
+    # プライベートアドレスに対する問い合わせを上位サーバに転送しない
     config.add(f"dns private address spoof on")
-    config.add(f"dns private name setup.netvolante.jp")
 
 # その他
 with config.section("Other"):
