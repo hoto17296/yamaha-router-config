@@ -276,7 +276,6 @@ with config.section("DHCP"):
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
 
     # DHCP 固定割り当て
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(2)} ac:44:f2:aa:6f:61")  # WLX212 クラスタ 仮想 NIC
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 38:9d:92:bc:e0:cf")  # プリンタ
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(7)} 00:01:2e:71:c4:cf")  # サーバ (ZBOX)
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(8)} 00:11:32:71:e5:07")  # NAS
