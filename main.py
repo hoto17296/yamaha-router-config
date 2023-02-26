@@ -61,6 +61,10 @@ with config.section("LAN"):
     config.add(f"ip {LAN_IF} intrusion detection in on reject=on")
     config.add(f"ip {LAN_IF} intrusion detection out on reject=on")
 
+    # iOS 15 以降の iPhone が何らかのタイミングで巨大 ping を送信する挙動によって不正アクセスとして検知されてしまうため、
+    # よい対策を思いつくまでの間は ICMP の不正アクセス検知を無効にする
+    config.add(f"ip {LAN_IF} intrusion detection in icmp off")
+
 with config.section("WAN"):
     # WAN 方向に DHCPv6 クライアントとして動作させる
     config.add(f"ipv6 {WAN_IF} dhcp service client")
