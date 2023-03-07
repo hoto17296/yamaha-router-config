@@ -12,6 +12,9 @@ WAN_IF = "onu1"
 
 IPIP6_TUNNEL_ID = 1
 
+# 不正アクセス検知するタイプ
+IDS_TYPES = ["ip", "ip-option", "fragment", "icmp", "udp", "tcp"]
+
 with config.section("User"):
     # ログインパスワード設定
     config.add(f"login password {ENV.USER_PASSWORD}")
@@ -58,13 +61,13 @@ with config.section("LAN"):
     config.add(f"ipv6 {LAN_IF} dhcp service server")
 
     # 不正アクセスを検知したらパケットを drop する
-    config.add(f"ip {LAN_IF} intrusion detection in on reject=on")
-    config.add(f"ip {LAN_IF} intrusion detection out on reject=on")
-
-    # iOS の通信が ICMP too large として不正アクセス検知されてしまうため、
-    # よい対策を思いつくまでの間は ICMP の不正アクセス検知設定を無効にする
-    config.add(f"ip {LAN_IF} intrusion detection in icmp off")
-    config.add(f"ip {LAN_IF} intrusion detection out icmp off")
+    config.add(f"ip {LAN_IF} intrusion detection in on")
+    for t in IDS_TYPES:
+        # ICMP は iOS の通信が ICMP too large として不正アクセス検知されてしまうため有効にしない
+        if t == "icmp":
+            continue
+        config.add(f"ip {LAN_IF} intrusion detection in {t} on reject=on")
+    config.add(f"ip {LAN_IF} intrusion detection in default off")
 
 with config.section("WAN"):
     # WAN 方向に DHCPv6 クライアントとして動作させる
@@ -108,8 +111,10 @@ with config.section("WAN"):
     )
 
     # 不正アクセスを検知したらパケットを drop する
-    config.add(f"ip {WAN_IF} intrusion detection in on reject=on")
-    config.add(f"ip {WAN_IF} intrusion detection out on reject=on")
+    config.add(f"ip {WAN_IF} intrusion detection in on")
+    for t in IDS_TYPES:
+        config.add(f"ip {WAN_IF} intrusion detection in {t} on reject=on")
+    config.add(f"ip {WAN_IF} intrusion detection in default off")
 
 # IPv4 over IPv6 トンネル設定
 with config.section("IPIP6"):
@@ -124,13 +129,13 @@ with config.section("IPIP6"):
         config.add("ip tunnel mtu 1460")
 
         # 不正アクセスを検知したらパケットを drop する
-        config.add("ip tunnel intrusion detection in on reject=on")
-        config.add("ip tunnel intrusion detection out on reject=on")
-
-        # iOS の通信が ICMP too large として不正アクセス検知されてしまうため、
-        # よい対策を思いつくまでの間は ICMP の不正アクセス検知設定を無効にする
-        config.add(f"ip tunnel intrusion detection in icmp off")
-        config.add(f"ip tunnel intrusion detection out icmp off")
+        config.add(f"ip tunnel intrusion detection in on")
+        for t in IDS_TYPES:
+            # ICMP は iOS の通信が ICMP too large として不正アクセス検知されてしまうため有効にしない
+            if t == "icmp":
+                continue
+            config.add(f"ip tunnel intrusion detection in {t} on reject=on")
+        config.add(f"ip tunnel intrusion detection in default off")
 
         # トンネルインタフェースのフィルタリング設定 (IN)
         config.ip_filter(
@@ -211,8 +216,10 @@ with config.section("PPPoE"):
         config.add("ppp ccp type none")
 
         # 不正アクセスを検知したらパケットを drop する
-        config.add("ip pp intrusion detection in on reject=on")
-        config.add("ip pp intrusion detection out on reject=on")
+        config.add(f"ip pp intrusion detection in on")
+        for t in IDS_TYPES:
+            config.add(f"ip pp intrusion detection in {t} on reject=on")
+        config.add(f"ip pp intrusion detection in default off")
 
         # PP インタフェースのフィルタリング設定 (IN)
         config.ip_filter(
