@@ -272,9 +272,6 @@ with config.section("PPPoE"):
             nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")
             nat.add(f"nat descriptor masquerade static {nat.descriptor} 3 {LAN_ADDR(1)} udp 4500")
 
-    # DDNS 設定
-    config.add(f"netvolante-dns hostname host pp server=1 {ENV.HOSTNAME}")
-
 # DHCP 設定
 with config.section("DHCP"):
     DHCP_SCOPE = 1
