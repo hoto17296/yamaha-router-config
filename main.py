@@ -61,8 +61,9 @@ with config.section("LAN"):
     config.add(f"ip {LAN_IF} intrusion detection in on reject=on")
     config.add(f"ip {LAN_IF} intrusion detection out on reject=on")
 
-    # iOS 15 以降の iPhone が何らかのタイミングで巨大 ping を送信する挙動によって不正アクセスとして検知されてしまうため、
-    # よい対策を思いつくまでの間は ICMP の不正アクセス検知を無効にする
+    # iOS の通信が ICMP too large として不正アクセス検知されてしまうため、
+    # よい対策を思いつくまでの間は ICMP の不正アクセス検知設定を無効にする
+    config.add(f"ip {LAN_IF} intrusion detection in icmp off")
     config.add(f"ip {LAN_IF} intrusion detection out icmp off")
 
 with config.section("WAN"):
@@ -125,6 +126,11 @@ with config.section("IPIP6"):
         # 不正アクセスを検知したらパケットを drop する
         config.add("ip tunnel intrusion detection in on reject=on")
         config.add("ip tunnel intrusion detection out on reject=on")
+
+        # iOS の通信が ICMP too large として不正アクセス検知されてしまうため、
+        # よい対策を思いつくまでの間は ICMP の不正アクセス検知設定を無効にする
+        config.add(f"ip tunnel intrusion detection in icmp off")
+        config.add(f"ip tunnel intrusion detection out icmp off")
 
         # トンネルインタフェースのフィルタリング設定 (IN)
         config.ip_filter(
