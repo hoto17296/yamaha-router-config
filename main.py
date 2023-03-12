@@ -286,10 +286,11 @@ with config.section("DHCP"):
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
 
     # DHCP 固定割り当て
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(5)} 18:c0:4d:dd:e2:40")  # EVOLV
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 38:9d:92:bc:e0:cf")  # プリンタ
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(7)} 00:01:2e:71:c4:cf")  # サーバ (ZBOX)
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(7)} 00:01:2e:71:c4:cf")  # ZBOX
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(8)} 00:11:32:71:e5:07")  # NAS
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(9)} 1c:69:7a:6a:66:8f")  # サーバ (NUC)
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(9)} 1c:69:7a:6a:66:8f")  # NUC
 
 # DNS 設定
 with config.section("DNS"):
