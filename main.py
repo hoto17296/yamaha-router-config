@@ -81,7 +81,7 @@ with config.section("WAN"):
         "in",
         static=[
             # VPN 接続のためのパケットは通す
-            f"pass * {ENV.WIREGUARD_SERVER_IP6_ADDR} * * {ENV.WIREGUARD_SERVER_PORT}",
+            f"pass * {ENV.WIREGUARD_SERVER_IP6_ADDR} udp * {ENV.WIREGUARD_SERVER_PORT}",
             "pass * * icmp6 * *",
             "pass * * tcp * ident",
             "pass * * udp * 546",
