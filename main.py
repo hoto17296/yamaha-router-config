@@ -26,16 +26,6 @@ with config.section("User"):
 with config.section("Route"):
     # IPv4 デフォルト経路設定
     with config.ip_route("default") as route:
-        # VPN 通信は PPPoE に流す
-        route.gateway(
-            f"pp 1",
-            filters=[
-                "pass * * esp",
-                "pass * * udp 500 *",
-                "pass * * udp 4500 *",
-            ],
-        )
-        # それ以外は IPIP6 トンネルに流す
         route.gateway(f"tunnel {IPIP6_TUNNEL_ID}")
 
     # IPv6 デフォルト経路設定
@@ -182,95 +172,6 @@ with config.section("IPIP6"):
         with config.nat("tunnel", "masquerade") as nat:
             # NAT 時の外側アドレスは MAP-E で自動生成されたアドレスを使う
             nat.add(f"nat descriptor address outer {nat.descriptor} map-e")
-
-# PPPoE 設定
-with config.section("PPPoE"):
-    with config.interface("pp", 1):
-        config.add(f"description pp {ENV.PPPOE_DESCRIPTION}")
-        config.add("pp keepalive interval 30 retry-interval=30 count=12")
-
-        # 常時接続する
-        config.add("pp always-on on")
-
-        # WAN インタフェースを使用
-        config.add(f"pppoe use {WAN_IF}")
-
-        # PPPoE セッションを自動切断しない
-        config.add("pppoe auto disconnect off")
-
-        # 認証タイプとして PAP と CHAP を受け入れる
-        config.add("pp auth accept pap chap")
-
-        # 認証情報
-        config.add(f"pp auth myname {ENV.PPPOE_USERNAME} {ENV.PPPOE_PASSWORD}")
-
-        # MRU の設定
-        config.add("ppp lcp mru on 1454")
-
-        # 接続相手と IP アドレスのネゴシエーションをする
-        config.add("ppp ipcp ipaddress on")
-
-        # IPCP の MS 拡張オプションを使う (DNS サーバアドレスを受け取れるようにする)
-        config.add("ppp ipcp msext on")
-
-        # パケットを圧縮しない
-        config.add("ppp ccp type none")
-
-        # 不正アクセスを検知したらパケットを drop する
-        config.add(f"ip pp intrusion detection in on")
-        for t in IDS_TYPES:
-            config.add(f"ip pp intrusion detection in {t} on reject=on")
-        config.add(f"ip pp intrusion detection in default off")
-
-        # PP インタフェースのフィルタリング設定 (IN)
-        config.ip_filter(
-            "pp",
-            "in",
-            static=[
-                f"reject {LAN_ADDR} * * * *",  # IP スプーフィング対策
-                "reject * * udp,tcp 135 *",
-                "reject * * udp,tcp * 135",
-                "reject * * udp,tcp netbios_ns-netbios_ssn *",
-                "reject * * udp,tcp * netbios_ns-netbios_ssn",
-                "reject * * udp,tcp 445 *",
-                "reject * * udp,tcp * 445",
-                f"pass * {LAN_ADDR} icmp * *",
-                f"pass * {LAN_ADDR} tcp * ident",
-                # 以下 VPN 用
-                # f"pass * * esp",
-                # f"pass * * udp * 500",
-                # f"pass * * udp * 4500",
-            ],
-        )
-
-        # PP インタフェースのフィルタリング設定 (OUT)
-        config.ip_filter(
-            "pp",
-            "out",
-            static=[
-                f"reject * {LAN_ADDR} * * *",  # IP スプーフィング対策
-                "reject * * udp,tcp 135 *",
-                "reject * * udp,tcp * 135",
-                "reject * * udp,tcp netbios_ns-netbios_ssn *",
-                "reject * * udp,tcp * netbios_ns-netbios_ssn",
-                "reject * * udp,tcp 445 *",
-                "reject * * udp,tcp * 445",
-                "pass * * * * *",
-            ],
-            dynamic=[
-                "* * domain",
-                "* * www",
-                "* * tcp",
-                "* * udp",
-            ],
-        )
-
-        # NAT 設定
-        with config.nat("pp", "masquerade") as nat:
-            # VPN 通信ではポート番号変換を行わない
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 1 {LAN_ADDR(1)} esp")
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")
-            nat.add(f"nat descriptor masquerade static {nat.descriptor} 3 {LAN_ADDR(1)} udp 4500")
 
 # DHCP 設定
 with config.section("DHCP"):
