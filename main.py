@@ -90,6 +90,8 @@ with config.section("WAN"):
         WAN_IF,
         "in",
         static=[
+            # VPN 接続のためのパケットは通す
+            f"pass * {ENV.WIREGUARD_SERVER_IP6_ADDR} * * {ENV.WIREGUARD_SERVER_PORT}",
             "pass * * icmp6 * *",
             "pass * * tcp * ident",
             "pass * * udp * 546",
@@ -178,7 +180,6 @@ with config.section("IPIP6"):
 
         # NAT 設定
         with config.nat("tunnel", "masquerade") as nat:
-
             # NAT 時の外側アドレスは MAP-E で自動生成されたアドレスを使う
             nat.add(f"nat descriptor address outer {nat.descriptor} map-e")
 
@@ -266,7 +267,6 @@ with config.section("PPPoE"):
 
         # NAT 設定
         with config.nat("pp", "masquerade") as nat:
-
             # VPN 通信ではポート番号変換を行わない
             nat.add(f"nat descriptor masquerade static {nat.descriptor} 1 {LAN_ADDR(1)} esp")
             nat.add(f"nat descriptor masquerade static {nat.descriptor} 2 {LAN_ADDR(1)} udp 500")
