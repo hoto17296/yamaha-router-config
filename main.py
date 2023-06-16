@@ -205,7 +205,7 @@ with config.section("DHCP"):
 
     # DHCP で払い出すアドレス範囲の設定
     config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 239)}")
-    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_ADDR.range(2, 239)}")
+    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_GUEST_ADDR.range(2, 239)}")
 
     # クライアント識別に Client-Identifier を使用しない
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
