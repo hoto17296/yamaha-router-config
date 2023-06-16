@@ -6,8 +6,10 @@ ENV = Env(".env")
 config = YamahaRouterConfigBuilder("NVR700W")
 
 LAN_ADDR = IPv4Addr("192.168.57.0/24")
+LAN_GUEST_ADDR = IPv4Addr("192.168.2.0/24")
 
 LAN_IF = "lan1"
+LAN_GUEST_IF = "lan1/1"
 WAN_IF = "onu1"
 
 IPIP6_TUNNEL_ID = 1
@@ -173,15 +175,37 @@ with config.section("IPIP6"):
             # NAT 時の外側アドレスは MAP-E で自動生成されたアドレスを使う
             nat.add(f"nat descriptor address outer {nat.descriptor} map-e")
 
+# VLAN (ゲストネットワーク)
+with config.section("VLAN"):
+    VLAN_ID = 2
+    VLAN_NAME = "guest"
+
+    config.add(f"vlan {LAN_GUEST_IF} 802.1q vid={VLAN_ID} name={VLAN_NAME}")
+    config.add(f"ip {LAN_GUEST_IF} address {LAN_GUEST_ADDR(1, True)}")
+
+    # ゲストネットワークからプライベートアドレスへのアクセスを拒否
+    config.ip_filter(
+        LAN_GUEST_IF,
+        "in",
+        static=[
+            "reject * 10.0.0.0/8 * * *",
+            "reject * 172.16.0.0/12 * * *",
+            "reject * 192.168.0.0/16 * * *",
+            "pass * * * * *",
+        ],
+    )
+
 # DHCP 設定
 with config.section("DHCP"):
-    DHCP_SCOPE = 1
+    DHCP_SCOPE = 1  # メインネットワーク
+    DHCP_SCOPE_GUEST = 2  # ゲストネットワーク
 
     # DHCP サーバを動作させる設定
     config.add(f"dhcp service server")
 
     # DHCP で払い出すアドレス範囲の設定
     config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 239)}")
+    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_ADDR.range(2, 239)}")
 
     # クライアント識別に Client-Identifier を使用しない
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
@@ -197,7 +221,7 @@ with config.section("DHCP"):
 # DNS 設定
 with config.section("DNS"):
     # LAN からの DNS アクセスを許可する
-    config.add(f"dns host {LAN_IF}")
+    config.add(f"dns host {LAN_IF} {LAN_GUEST_IF}")
 
     # 名前解決は IPv6 を優先し、IPv6 で名前解決できない場合に IPv4 へフォールバックする
     config.add(f"dns service fallback on")
@@ -212,6 +236,9 @@ with config.section("DNS"):
 with config.section("Other"):
     # Syslog を NAS に保存
     config.add(f"syslog host {LAN_ADDR(8)}")
+
+    # 管理画面へのアクセスは LAN からのみ許可する (ゲストネットワークからは許可しない)
+    config.add(f"httpd host {LAN_IF}")
 
     # Telnet アクセスを無効化
     config.add("telnetd service off")
