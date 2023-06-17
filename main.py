@@ -132,6 +132,7 @@ with config.section("IPIP6"):
         config.add(f"ip tunnel intrusion detection in default off")
 
         # トンネルインタフェースのフィルタリング設定 (IN)
+        # 参考: https://network.yamaha.com/setting/router_firewall/security/wan_side/ip_filter_wizard_explain-nvr500
         config.ip_filter(
             "tunnel",
             "in",
