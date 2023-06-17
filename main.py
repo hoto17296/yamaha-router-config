@@ -147,7 +147,7 @@ with config.section("IPIP6"):
                 "reject * * udp,tcp * netbios_ns-netbios_ssn",
                 "reject * * udp,tcp 445 *",
                 "reject * * udp,tcp * 445",
-                "pass *",
+                "pass * * * * *",
             ],
             dynamic=[
                 "* * domain",
@@ -175,8 +175,10 @@ with config.section("VLAN"):
         LAN_GUEST_IF,
         "in",
         static=[
-            f"reject {LAN_GUEST_ADDR} {LAN_ADDR}",
-            "pass *",
+            "reject * 10.0.0.0/8 * * *",
+            "reject * 172.16.0.0/12 * * *",
+            "reject * 192.168.0.0/16 * * *",
+            "pass * * * * *",
         ],
     )
 
