@@ -175,9 +175,7 @@ with config.section("VLAN"):
         LAN_GUEST_IF,
         "in",
         static=[
-            "reject * 10.0.0.0/8 * * *",
-            "reject * 172.16.0.0/12 * * *",
-            "reject * 192.168.0.0/16 * * *",
+            f"reject {LAN_GUEST_ADDR} {LAN_ADDR}",
             "pass * * * * *",
         ],
     )
