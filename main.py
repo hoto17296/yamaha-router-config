@@ -91,19 +91,6 @@ with config.section("WAN"):
         ],
     )
 
-    # WAN インタフェースのフィルタリング設定 (OUT)
-    config.ipv6_filter(
-        WAN_IF,
-        "out",
-        static=["pass *"],
-        dynamic=[
-            "* * domain",
-            "* * www",
-            "* * tcp",
-            "* * udp",
-        ],
-    )
-
     # 不正アクセスを検知したらパケットを drop する
     config.add(f"ip {WAN_IF} intrusion detection in on")
     for t in IDS_TYPES:
