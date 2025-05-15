@@ -1,14 +1,10 @@
-from typing import Literal
-
-
-def uniq(arr: list[str]) -> list[str]:
-    """順序を保ちつつ unique なリストを作る"""
-    return list(dict.fromkeys(arr).keys())
+from .types import NetProtocol
+from .utils import uniq
 
 
 class Filter:
-    def __init__(self, proto: Literal["ip", "ipv6"], dynamic: bool, filter_num_base: int):
-        self.proto = proto
+    def __init__(self, protocol: NetProtocol, dynamic: bool, filter_num_base: int):
+        self.protocol: NetProtocol = protocol
         self.dynamic = dynamic
         self.filter_num_base = filter_num_base
         self.defs: list[str] = []
@@ -21,6 +17,6 @@ class Filter:
 
     def build_commands(self) -> list[str]:
         return [
-            f"{self.proto} filter{' dynamic' if self.dynamic else ''} {num} {_def}"
+            f"{self.protocol} filter{' dynamic' if self.dynamic else ''} {num} {_def}"
             for _def, num in self.build_table().items()
         ]

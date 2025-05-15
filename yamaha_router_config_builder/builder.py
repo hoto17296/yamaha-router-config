@@ -1,30 +1,32 @@
 from contextlib import contextmanager
-from typing import Literal
-from .command import YamahaRouterCommand, BasicCommand, FilterCommand, RouteCommand
+
+from .command import BasicCommand, FilterCommand, RouteCommand, YamahaRouterCommand
 from .filter import Filter
 from .nat import Nat
-
-
-def counter(initial: int = 0):
-    n = initial
-    while True:
-        yield n
-        n += 1
+from .types import Direction
+from .utils import Counter, counter
 
 
 class YamahaRouterConfigBuilder:
-    def __init__(self, device: str = None, version: str = None):
+    device: str
+    version: str
+    commands: list[YamahaRouterCommand]
+    filters: dict[str, Filter]
+    nat_descriptor_counter: Counter
+    nat_descriptions: list[Nat]
+
+    def __init__(self, device: str | None = None, version: str | None = None):
         self.device = device or "Router"
         self.version = version or "0.0.0"
-        self.commands: list[YamahaRouterCommand] = []
-        self.filters: dict[str, Filter] = {
+        self.commands = []
+        self.filters = {
             "ip_filter": Filter("ip", False, 1000),
             "ip_dynamic_filter": Filter("ip", True, 2000),
             "ipv6_filter": Filter("ipv6", False, 3000),
             "ipv6_dynamic_filter": Filter("ipv6", True, 4000),
         }
         self.nat_descriptor_counter = counter(1)
-        self.nat_descriptions: list[Nat] = []
+        self.nat_descriptions = []
 
     @contextmanager
     def section(self, title: str):
@@ -34,10 +36,10 @@ class YamahaRouterConfigBuilder:
     def add(self, command):
         self.commands.append(BasicCommand(command))
 
-    def ip_filter(self, interface, direction: Literal["in", "out"], static: list[str] = [], dynamic: list[str] = []):
+    def ip_filter(self, interface, direction: Direction, static: list[str] = [], dynamic: list[str] = []):
         self.commands.append(FilterCommand(self.filters, "ip", interface, direction, static, dynamic))
 
-    def ipv6_filter(self, interface, direction: Literal["in", "out"], static: list[str] = [], dynamic: list[str] = []):
+    def ipv6_filter(self, interface, direction: Direction, static: list[str] = [], dynamic: list[str] = []):
         self.commands.append(FilterCommand(self.filters, "ipv6", interface, direction, static, dynamic))
 
     def ip_route(self, network: str):
@@ -59,7 +61,7 @@ class YamahaRouterConfigBuilder:
         return route
 
     @contextmanager
-    def interface(self, interface: str, id: str):
+    def interface(self, interface: str, id: int):
         self.add(f"{interface} select {id}")
         try:
             yield
