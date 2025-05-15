@@ -1,0 +1,28 @@
+{
+  "name": "yamaha-router-config",
+  "image": "python:3.13",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.python"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.formatOnSaveMode": "file",
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          },
+          "editor.tabSize": 4
+        },
+        "python.languageServer": "Pylance",
+        "python.analysis.typeCheckingMode": "basic",
+        "black-formatter.args": ["--target-version=py313", "--line-length=120"],
+        "isort.args": ["--profile=black"]
+      }
+    }
+  }
+}
