@@ -6,3 +6,9 @@ requires-python = ">=3.13"
 dependencies = [
   "yamaha_router_config_builder @ file:///${PROJECT_ROOT}/yamaha_router_config_builder"
 ]
+
+[dependency-groups]
+dev = [
+    "ipython>=9.2.0",
+    "pytest>=8.3.5",
+]

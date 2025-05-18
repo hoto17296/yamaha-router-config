@@ -1,1 +1,1 @@
-uv sync
+uv sync --dev
