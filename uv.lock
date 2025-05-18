@@ -1,0 +1,19 @@
+version = 1
+revision = 2
+requires-python = ">=3.13"
+
+[[package]]
+name = "yamaha-router-config"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "yamaha-router-config-builder" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "yamaha-router-config-builder", directory = "yamaha_router_config_builder" }]
+
+[[package]]
+name = "yamaha-router-config-builder"
+version = "0.1.0"
+source = { directory = "yamaha_router_config_builder" }

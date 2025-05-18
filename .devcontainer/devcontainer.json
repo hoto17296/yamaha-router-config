@@ -1,7 +1,11 @@
 {
   "name": "yamaha-router-config",
-  "image": "python:3.13",
+  "build": {
+    "dockerfile": "./Dockerfile",
+    "context": ".."
+  },
   "runArgs": ["--env-file",".env"],
+  "postCreateCommand": "bash -eu .devcontainer/postCreate.sh",
   "customizations": {
     "vscode": {
       "extensions": [
