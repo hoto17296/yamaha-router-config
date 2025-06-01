@@ -227,6 +227,27 @@ with config.section("DNS"):
     # プライベートアドレスに対する問い合わせを上位サーバに転送しない
     config.add(f"dns private address spoof on")
 
+# メール通知設定
+with config.section("Mail"):
+    SMTP_HOST = environ.get("SMTP_HOST")
+    SMTP_USERNAME = environ.get("SMTP_USERNAME")
+    SMTP_PASSWORD = environ.get("SMTP_PASSWORD")
+    MAIL_TO_ADDR = environ.get("MAIL_TO_ADDR")
+
+    # メールサーバの設定
+    MAIL_SERVER_ID = 1
+    config.add(f"mail server name {MAIL_SERVER_ID} default")
+    config.add(f"mail server smtp {MAIL_SERVER_ID} {SMTP_HOST} smtp-auth {SMTP_USERNAME} {SMTP_PASSWORD} smtps")
+
+    # メールテンプレートの設定
+    MAIL_TEMPLATE_ID = 1
+    config.add(f"mail template {MAIL_TEMPLATE_ID} {MAIL_SERVER_ID} From:{SMTP_USERNAME} To:{MAIL_TO_ADDR}")
+
+    # メール通知項目の設定
+    config.add(f"mail notify 1 {MAIL_TEMPLATE_ID} trigger lan-map")  # LANマップの異常検知
+    config.add(f"mail notify 2 {MAIL_TEMPLATE_ID} trigger intrusion * in/out")  # 不正アクセス検知
+    config.add(f"mail notify 3 {MAIL_TEMPLATE_ID} trigger status interface")  # 本体状態の手動通知
+
 # その他
 with config.section("Other"):
     # Syslog を NAS に保存
