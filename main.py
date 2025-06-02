@@ -229,10 +229,10 @@ with config.section("DNS"):
 
 # メール通知設定
 with config.section("Mail"):
-    SMTP_HOST = environ.get("SMTP_HOST")
-    SMTP_USERNAME = environ.get("SMTP_USERNAME")
-    SMTP_PASSWORD = environ.get("SMTP_PASSWORD")
-    MAIL_TO_ADDR = environ.get("MAIL_TO_ADDR")
+    SMTP_HOST = environ["SMTP_HOST"]
+    SMTP_USERNAME = environ["SMTP_USERNAME"]
+    SMTP_PASSWORD = environ["SMTP_PASSWORD"]
+    MAIL_TO_ADDR = environ["MAIL_TO_ADDR"]
 
     # メールサーバの設定
     MAIL_SERVER_ID = 1
@@ -269,7 +269,7 @@ with config.section("Other"):
     config.add("statistics traffic on")
 
     # ネットボランチ DNS を設定
-    NETVOLANTE_DNS_HOST = environ.get("NETVOLANTE_DNS_HOST")
+    NETVOLANTE_DNS_HOST = environ["NETVOLANTE_DNS_HOST"]
     config.add(f"netvolante-dns hostname host {WAN_IF} {NETVOLANTE_DNS_HOST} ipv6 address")
 
 if __name__ == "__main__":
