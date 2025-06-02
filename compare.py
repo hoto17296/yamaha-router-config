@@ -6,7 +6,14 @@ import sys
 def read_config(file_path: str) -> list[str]:
     with open(file_path, "rt") as f:
         lines = f.readlines()
-    return [line.strip() for line in lines if line.strip() and not line.startswith("#")]
+    return [
+        line.strip()
+        for line in lines
+        if line.strip()
+        and not line.startswith("#")
+        and not line.startswith("login password")
+        and not line.startswith("administrator password")
+    ]
 
 
 if __name__ == "__main__":
