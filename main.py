@@ -11,6 +11,7 @@ LAN_GUEST_ADDR = IPv4Addr("192.168.2.0/24")
 LAN_IF = "lan1"
 LAN_GUEST_IF = "lan1/1"
 WAN_IF = "onu1"
+WAN_PREFIX = f"dhcp-prefix@{WAN_IF}"
 
 IPIP6_TUNNEL_ID = 1
 
@@ -39,11 +40,11 @@ with config.section("LAN"):
     config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
 
     # LAN インタフェースの IPv6 アドレスの設定
-    config.add(f"ipv6 {LAN_IF} address dhcp-prefix@{WAN_IF}::1/64")
+    config.add(f"ipv6 {LAN_IF} address {WAN_PREFIX}::1/64")
 
     # ルーター広告する IPv6 プレフィックスの設定
     IPV6_PREFIX_ID = 1
-    config.add(f"ipv6 prefix {IPV6_PREFIX_ID} dhcp-prefix@{WAN_IF}::/64")
+    config.add(f"ipv6 prefix {IPV6_PREFIX_ID} {WAN_PREFIX}::/64")
 
     # ルーター広告の設定
     # o_flag=on: アドレス以外の情報をホストに自動取得させる (ゲートウェイとか？？よくわかってない)
