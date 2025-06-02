@@ -268,5 +268,9 @@ with config.section("Other"):
     # トラフィックの統計データを取る
     config.add("statistics traffic on")
 
+    # ネットボランチ DNS を設定
+    NETVOLANTE_DNS_HOST = environ.get("NETVOLANTE_DNS_HOST")
+    config.add(f"netvolante-dns hostname host {WAN_IF} {NETVOLANTE_DNS_HOST} ipv6 address")
+
 if __name__ == "__main__":
     print(config.build())
