@@ -1,7 +1,7 @@
 from os import environ
 
 from yamaha_router_config_builder import YamahaRouterConfigBuilder
-from yamaha_router_config_builder.utils import IPv4Addr
+from yamaha_router_config_builder.utils import IPv4Addr, counter
 
 config = YamahaRouterConfigBuilder("NVR700W")
 
@@ -13,7 +13,8 @@ LAN_GUEST_IF = "lan1/1"
 WAN_IF = "onu1"
 WAN_PREFIX = f"dhcp-prefix@{WAN_IF}"
 
-IPIP6_TUNNEL_ID = 1
+interface_counter = counter(1)
+IPIP6_TUNNEL_ID = next(interface_counter)
 
 # 不正アクセス検知するタイプ
 IDS_TYPES = ["ip", "ip-option", "fragment", "icmp", "udp", "tcp"]
@@ -87,6 +88,10 @@ with config.section("WAN"):
             "pass * * tcp * ident",
             "pass * * udp * 546",
             "pass * * 4",
+            # リモートアクセス VPN 用の許可設定
+            f"pass * * esp",
+            f"pass * * udp * 500",
+            f"pass * * udp * 4500",
         ],
     )
 
@@ -202,8 +207,8 @@ with config.section("DHCP"):
     config.add(f"dhcp service server")
 
     # DHCP で払い出すアドレス範囲の設定
-    config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 239)}")
-    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_GUEST_ADDR.range(2, 239)}")
+    config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 249)}")
+    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_GUEST_ADDR.range(2, 249)}")
 
     # クライアント識別に Client-Identifier を使用しない
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
@@ -248,6 +253,61 @@ with config.section("Mail"):
     config.add(f"mail notify 1 {MAIL_TEMPLATE_ID} trigger lan-map")  # LANマップの異常検知
     config.add(f"mail notify 2 {MAIL_TEMPLATE_ID} trigger intrusion * in/out")  # 不正アクセス検知
     config.add(f"mail notify 3 {MAIL_TEMPLATE_ID} trigger status interface")  # 本体状態の手動通知
+
+with config.section("VPN"):
+    VPN_CLIENTS = environ["VPN_CLIENTS"].split(",")
+    VPN_PSK = environ["VPN_PSK"]
+    VPN_GW_ID_DOMAIN = environ["VPN_GW_ID_DOMAIN"]
+
+    # VPN クライアントに割り当てる IP アドレス範囲を設定
+    VPN_ADDR_POOL_ID = 1
+    config.add(f"ipsec ike mode-cfg address pool {VPN_ADDR_POOL_ID} {LAN_ADDR.range(250, 254)}")
+
+    for vpn_client_name in VPN_CLIENTS:
+        TUNNEL_INTERFACE_ID = next(interface_counter)
+        # セキュアゲートウェイ ID はトンネルインタフェース番号と同じものを使うことにする
+        # ※ セキュアゲートウェイ ID はトンネルインタフェース番号はいずれも機器ごとに上限が決まっている (どうやら「VPN対地数」のことらしく、NVR700W の場合は 20)
+        #   → https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/ipsec/ipsec_chapter.html
+        SECURE_GW_ID = TUNNEL_INTERFACE_ID
+        # SA ポリシー ID はトンネルインタフェース番号と同じものを使うことにする (本来同じである必要はないが)
+        SA_POLICY_ID = TUNNEL_INTERFACE_ID
+
+        # VPN クライアントごとに IPsec トンネルを作成する
+        with config.interface("tunnel", TUNNEL_INTERFACE_ID):
+            config.add(f"description tunnel {vpn_client_name}")
+            config.add("tunnel encapsulation ipsec")
+
+            # SA ポリシーを定義し、暗号化と認証の方式として ESP を設定する
+            # ※ SA (Security Association) は IPsec 接続のこと
+            config.add(f"ipsec sa policy {SA_POLICY_ID} {SECURE_GW_ID} esp")
+
+            # トンネルで使用する SA のポリシーを設定する
+            config.add(f"ipsec tunnel {SA_POLICY_ID}")
+
+            # IKE の鍵交換を自動で開始しない (クライアント側から接続するので)
+            config.add(f"ipsec auto refresh {SA_POLICY_ID} off")
+
+            # セキュアゲートウェイで使用する IKE のバージョンを設定する
+            config.add(f"ipsec ike version {SECURE_GW_ID} 2")
+
+            # IKE キープアライブのログ出力を無効にする
+            config.add(f"ipsec ike keepalive log {SECURE_GW_ID} off")
+
+            # IKE キープアライブの設定 (10秒間隔で送信し、3回届かなかったら障害とみなす)
+            config.add(f"ipsec ike keepalive use {SECURE_GW_ID} on rfc4306 10 3")
+
+            # 自分側のセキュアゲートウェイの ID として FQDN を設定する
+            config.add(f"ipsec ike local name {SECURE_GW_ID} {VPN_GW_ID_DOMAIN} fqdn")
+
+            # 事前共有鍵 (PSK) を設定する
+            config.add(f"ipsec ike pre-shared-key {SECURE_GW_ID} text {VPN_PSK}")
+
+            # 相手側のセキュアゲートウェイの ID としてユーザ FQDN を設定する
+            config.add(f"ipsec ike remote name {SECURE_GW_ID} {vpn_client_name}@{VPN_GW_ID_DOMAIN} user-fqdn")
+
+            # IPsec クライアントに内部 IP アドレスを割り当てる際のアドレスプールを設定する
+            config.add(f"ipsec ike mode-cfg address {SECURE_GW_ID} {VPN_ADDR_POOL_ID}")
+
 
 # その他
 with config.section("Other"):

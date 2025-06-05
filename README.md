@@ -5,12 +5,16 @@ YAMAHA Router as Code
 Create `.env` file
 
 ```
-USER_PASSWORD=...
-ADMIN_PASSWORD=...
-SMTP_HOST=...
-SMTP_USERNAME=...
-SMTP_PASSWORD=...
-MAIL_TO_ADDR=...
+USER_PASSWORD=
+ADMIN_PASSWORD=
+SMTP_HOST=
+SMTP_USERNAME=
+SMTP_PASSWORD=
+MAIL_TO_ADDR=
+NETVOLANTE_DNS_HOST=example.aa0.netvolante.jp
+VPN_CLIENTS=foo,bar
+VPN_PSK=
+VPN_GW_ID_DOMAIN=example.com
 ```
 
 ## Usage
