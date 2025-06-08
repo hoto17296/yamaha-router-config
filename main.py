@@ -40,6 +40,9 @@ with config.section("LAN"):
     # LAN インタフェースの IPv4 アドレスの設定
     config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
 
+    # Proxy ARP を有効にする (VPN クライアントから LAN 内のホストに接続するために必要)
+    config.add(f"ip {LAN_IF} proxyarp on")
+
     # LAN インタフェースの IPv6 アドレスの設定
     config.add(f"ipv6 {LAN_IF} address {WAN_PREFIX}::1/64")
 
@@ -326,8 +329,9 @@ with config.section("Other"):
     # 毎日6時に時刻同期する
     config.add("schedule at 1 */* 06:00:00 * ntpdate ntp.nict.jp syslog")
 
-    # トラフィックの統計データを取る
+    # トラフィックと NAT のデータを取る
     config.add("statistics traffic on")
+    config.add("statistics nat on")
 
     # ネットボランチ DNS を設定
     NETVOLANTE_DNS_HOST = environ["NETVOLANTE_DNS_HOST"]
