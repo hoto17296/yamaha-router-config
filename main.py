@@ -257,6 +257,7 @@ with config.section("Mail"):
     config.add(f"mail notify 2 {MAIL_TEMPLATE_ID} trigger intrusion * in/out")  # 不正アクセス検知
     config.add(f"mail notify 3 {MAIL_TEMPLATE_ID} trigger status interface")  # 本体状態の手動通知
 
+# TODO: VPN 接続時にインターネットにアクセスできなくなる問題が解決していない (詳細は memo.md を参照)
 with config.section("VPN"):
     VPN_CLIENTS = environ["VPN_CLIENTS"].split(",")
     VPN_PSK = environ["VPN_PSK"]
