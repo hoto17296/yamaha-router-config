@@ -219,7 +219,7 @@ with config.section("DHCP"):
     # DHCP 固定割り当て
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(4)} 2c:cf:67:11:40:cd")  # Raspberry Pi 5 (Wi-Fi)
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(5)} 18:c0:4d:dd:e2:40")  # EVOLV
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 38:9d:92:bc:e0:cf")  # プリンタ
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 20:0b:74:c5:dc:aa")  # プリンタ
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(8)} 90:09:d0:56:a3:b4")  # NAS
 
 # DNS 設定
