@@ -12,3 +12,6 @@ dev = [
     "ipython>=9.2.0",
     "pytest>=8.3.5",
 ]
+
+[tool.uv.sources]
+yamaha_router_config_builder = { path = "yamaha_router_config_builder", editable = true }

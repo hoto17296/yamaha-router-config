@@ -1,12 +1,13 @@
+from ipaddress import IPv4Network
 from os import environ
 
 from yamaha_router_config_builder import YamahaRouterConfigBuilder
-from yamaha_router_config_builder.utils import IPv4Addr, counter
+from yamaha_router_config_builder.utils import addr_range, counter
 
 config = YamahaRouterConfigBuilder("NVR700W")
 
-LAN_ADDR = IPv4Addr("192.168.57.0/24")
-LAN_GUEST_ADDR = IPv4Addr("192.168.2.0/24")
+LAN_ADDR = IPv4Network("192.168.57.0/24")
+LAN_GUEST_ADDR = IPv4Network("192.168.2.0/24")
 
 LAN_IF = "lan1"
 LAN_GUEST_IF = "lan1/1"
@@ -38,7 +39,7 @@ with config.section("Route"):
 
 with config.section("LAN"):
     # LAN インタフェースの IPv4 アドレスの設定
-    config.add(f"ip {LAN_IF} address {LAN_ADDR(1, prefix=True)}")
+    config.add(f"ip {LAN_IF} address {LAN_ADDR[1]}/{LAN_ADDR.prefixlen}")
 
     # Proxy ARP を有効にする (VPN クライアントから LAN 内のホストに接続するために必要)
     config.add(f"ip {LAN_IF} proxyarp on")
@@ -189,7 +190,7 @@ with config.section("VLAN"):
     VLAN_NAME = "guest"
 
     config.add(f"vlan {LAN_GUEST_IF} 802.1q vid={VLAN_ID} name={VLAN_NAME}")
-    config.add(f"ip {LAN_GUEST_IF} address {LAN_GUEST_ADDR(1, True)}")
+    config.add(f"ip {LAN_GUEST_IF} address {LAN_GUEST_ADDR[1]}/{LAN_GUEST_ADDR.prefixlen}")
 
     # ゲストネットワークからプライベートアドレスへのアクセスを拒否
     config.ip_filter(
@@ -210,17 +211,17 @@ with config.section("DHCP"):
     config.add(f"dhcp service server")
 
     # DHCP で払い出すアドレス範囲の設定
-    config.add(f"dhcp scope {DHCP_SCOPE} {LAN_ADDR.range(2, 249)}")
-    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {LAN_GUEST_ADDR.range(2, 249)}")
+    config.add(f"dhcp scope {DHCP_SCOPE} {addr_range(LAN_ADDR, 2, 249)}")
+    config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {addr_range(LAN_GUEST_ADDR, 2, 249)}")
 
     # クライアント識別に Client-Identifier を使用しない
     config.add(f"dhcp server rfc2131 compliant except use-clientid")
 
     # DHCP 固定割り当て
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(4)} 2c:cf:67:11:40:cd")  # Raspberry Pi 5 (Wi-Fi)
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(5)} 18:c0:4d:dd:e2:40")  # EVOLV
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(6)} 20:0b:74:c5:dc:aa")  # プリンタ
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR(8)} 90:09:d0:56:a3:b4")  # NAS
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[4]} 2c:cf:67:11:40:cd")  # Raspberry Pi 5 (Wi-Fi)
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[5]} 18:c0:4d:dd:e2:40")  # EVOLV
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[6]} 20:0b:74:c5:dc:aa")  # プリンタ
+    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[8]} 90:09:d0:56:a3:b4")  # NAS
 
 # DNS 設定
 with config.section("DNS"):
@@ -265,7 +266,7 @@ with config.section("VPN"):
 
     # VPN クライアントに割り当てる IP アドレス範囲を設定
     VPN_ADDR_POOL_ID = 1
-    config.add(f"ipsec ike mode-cfg address pool {VPN_ADDR_POOL_ID} {LAN_ADDR.range(250, 254)}")
+    config.add(f"ipsec ike mode-cfg address pool {VPN_ADDR_POOL_ID} {addr_range(LAN_ADDR, 250, 254)}")
 
     for vpn_client_name in VPN_CLIENTS:
         TUNNEL_INTERFACE_ID = next(interface_counter)
@@ -316,7 +317,7 @@ with config.section("VPN"):
 # その他
 with config.section("Other"):
     # Syslog を NAS に保存
-    config.add(f"syslog host {LAN_ADDR(8)}")
+    config.add(f"syslog host {LAN_ADDR[8]}")
 
     # 管理画面へのアクセスは LAN からのみ許可する (ゲストネットワークからは許可しない)
     config.add(f"httpd host {LAN_IF}")
