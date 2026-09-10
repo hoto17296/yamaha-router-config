@@ -2,19 +2,22 @@
 YAMAHA Router as Code
 
 ## Setup
-Create `.env` file
+Create a `.devcontainer/compose.env.yaml` file like the one below and open this repository in Dev Containers.
 
 ```
-USER_PASSWORD=
-ADMIN_PASSWORD=
-SMTP_HOST=
-SMTP_USERNAME=
-SMTP_PASSWORD=
-MAIL_TO_ADDR=
-NETVOLANTE_DNS_HOST=example.aa0.netvolante.jp
-VPN_CLIENTS=foo,bar
-VPN_PSK=
-VPN_GW_ID_DOMAIN=example.com
+services:
+  workspace:
+    environment:
+      USER_PASSWORD:
+      ADMIN_PASSWORD:
+      SMTP_HOST:
+      SMTP_USERNAME:
+      SMTP_PASSWORD:
+      MAIL_TO_ADDR:
+      NETVOLANTE_DNS_HOST: example.aa0.netvolante.jp
+      VPN_CLIENTS: foo,bar
+      VPN_PSK:
+      VPN_GW_ID_DOMAIN: example.com
 ```
 
 ## Usage

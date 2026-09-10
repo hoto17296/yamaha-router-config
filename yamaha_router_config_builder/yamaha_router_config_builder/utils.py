@@ -1,5 +1,6 @@
+from collections.abc import Generator
 from ipaddress import IPv4Network
-from typing import Any, Generator, NoReturn
+from typing import Any, NoReturn
 
 type Counter = Generator[int, Any, NoReturn]
 

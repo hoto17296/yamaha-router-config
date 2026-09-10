@@ -22,8 +22,8 @@ IDS_TYPES = ["ip", "ip-option", "fragment", "icmp", "udp", "tcp"]
 
 with config.section("User"):
     # ログインパスワード設定
-    config.add(f"login password {environ["USER_PASSWORD"]}")
-    config.add(f"administrator password {environ["ADMIN_PASSWORD"]}")
+    config.add(f"login password {environ['USER_PASSWORD']}")
+    config.add(f"administrator password {environ['ADMIN_PASSWORD']}")
 
     # ログインセッションの期限を1時間に設定
     config.add(f"user attribute login-timer={60 * 60}")

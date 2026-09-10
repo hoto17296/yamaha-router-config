@@ -9,9 +9,19 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ipython>=9.2.0",
-    "pytest>=8.3.5",
+    "ipython>=9.7.0",
+    "pytest>=9.1.0",
 ]
 
 [tool.uv.sources]
 yamaha_router_config_builder = { path = "yamaha_router_config_builder", editable = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["yamaha_router_config_builder"]

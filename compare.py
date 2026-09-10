@@ -4,7 +4,7 @@ import sys
 
 
 def read_config(file_path: str) -> list[str]:
-    with open(file_path, "rt") as f:
+    with open(file_path) as f:
         lines = f.readlines()
     return [
         line.strip()
