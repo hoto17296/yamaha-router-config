@@ -124,8 +124,8 @@ with config.section("IPIP6"):
         # トンネルの種別を MAP-E として設定
         config.add("tunnel encapsulation map-e")
 
-        # MAP-E の種別を OCN バーチャルコネクトとして設定
-        config.add("tunnel map-e type ocn")
+        # MAP-E の種別を「v6プラス」として設定
+        config.add("tunnel map-e type v6plus")
 
         # MTU 設定
         config.add("ip tunnel mtu 1460")
