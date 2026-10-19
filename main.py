@@ -71,9 +71,6 @@ with config.section("WAN"):
     # WAN 方向に DHCPv6 クライアントとして動作させる
     config.add(f"ipv6 {WAN_IF} dhcp service client")
 
-    # WAN インタフェースの IPv4 アドレスは DHCP で取得する
-    config.add(f"ip {WAN_IF} address dhcp")  # IPoE って IPv4 アドレスもらえるのか？
-
     # WAN インタフェースの IPv6 アドレスは DHCP で取得する
     config.add(f"ipv6 {WAN_IF} address dhcp")
 
@@ -89,9 +86,10 @@ with config.section("WAN"):
         "in",
         static=[
             "pass * * icmp6 * *",
-            "pass * * tcp * ident",
-            "pass * * udp * 546",
-            "pass * * 4",
+            # DHCPv6 サーバ (リンクローカルの 547 番ポート) からの応答のみ許可
+            "pass fe80::/10 * udp 547 546",
+            # IPv4 over IPv6 (MAP-E) のパケットはルータの MAP-E アドレス宛てのみ許可
+            "pass * map-e 4",
             # リモートアクセス VPN 用の許可設定
             f"pass * * esp",
             f"pass * * udp * 500",
@@ -130,6 +128,9 @@ with config.section("IPIP6"):
         # MTU 設定
         config.add("ip tunnel mtu 1460")
 
+        # TCP の MSS をトンネルの MTU に合わせて自動調整する (カプセル化によるパケットサイズ超過対策)
+        config.add("ip tunnel tcp mss limit auto")
+
         # 不正アクセスを検知したらパケットを drop する
         config.add(f"ip tunnel intrusion detection in on")
         for t in IDS_TYPES:
@@ -153,7 +154,6 @@ with config.section("IPIP6"):
                 "reject * * udp,tcp 445 *",
                 "reject * * udp,tcp * 445",
                 f"pass * {LAN_ADDR} icmp * *",
-                f"pass {LAN_ADDR} tcp * ident",
             ],
         )
 
@@ -281,6 +281,9 @@ with config.section("VPN"):
         with config.interface("tunnel", TUNNEL_INTERFACE_ID):
             config.add(f"description tunnel {vpn_client_name}")
             config.add("tunnel encapsulation ipsec")
+
+            # TCP の MSS をトンネルの MTU に合わせて自動調整する (ESP と MAP-E の二重カプセル化対策)
+            config.add("ip tunnel tcp mss limit auto")
 
             # SA ポリシーを定義し、暗号化と認証の方式として ESP を設定する
             # ※ SA (Security Association) は IPsec 接続のこと
