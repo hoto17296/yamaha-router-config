@@ -49,9 +49,6 @@ with config.section("LAN"):
     # LAN インタフェースの IPv4 アドレスの設定
     config.add(f"ip {LAN_IF} address {LAN_ADDR[1]}/{LAN_ADDR.prefixlen}")
 
-    # Proxy ARP を有効にする (VPN クライアントから LAN 内のホストに接続するために必要)
-    config.add(f"ip {LAN_IF} proxyarp on")
-
     # LAN インタフェースの IPv6 アドレスの設定
     config.add(f"ipv6 {LAN_IF} address {WAN_PREFIX}::1/64")
 
@@ -83,7 +80,7 @@ with config.section("WAN"):
     config.add(f"ipv6 {WAN_IF} address dhcp")
 
     # インタフェースがリンクダウンした際に DHCP サーバから得ていた情報をリリースする
-    config.add(f"dhcp client release linkdown on")
+    config.add("dhcp client release linkdown on")
 
     # NGN 網に接続する
     config.add(f"ngn type {WAN_IF} ntt")
@@ -98,10 +95,6 @@ with config.section("WAN"):
             "pass fe80::/10 * udp 547 546",
             # IPv4 over IPv6 (MAP-E) のパケットはルータの MAP-E アドレス宛てのみ許可
             "pass * map-e 4",
-            # リモートアクセス VPN 用の許可設定
-            f"pass * * esp",
-            f"pass * * udp * 500",
-            f"pass * * udp * 4500",
         ],
     )
 
@@ -127,10 +120,8 @@ with config.section("WAN"):
 # IPv4 over IPv6 トンネル設定
 with config.section("IPIP6"):
     with config.interface("tunnel", IPIP6_TUNNEL_ID):
-        # トンネルの種別を MAP-E として設定
+        # IPIP6 の方式は MAP-E (v6プラス)
         config.add("tunnel encapsulation map-e")
-
-        # MAP-E の種別を「v6プラス」として設定
         config.add("tunnel map-e type v6plus")
 
         # MTU 設定
@@ -140,13 +131,13 @@ with config.section("IPIP6"):
         config.add("ip tunnel tcp mss limit auto")
 
         # 不正アクセスを検知したらパケットを drop する
-        config.add(f"ip tunnel intrusion detection in on")
+        config.add("ip tunnel intrusion detection in on")
         for t in IDS_TYPES:
             # ICMP は iOS の通信が ICMP too large として不正アクセス検知されてしまうため有効にしない
             if t == "icmp":
                 continue
             config.add(f"ip tunnel intrusion detection in {t} on reject=on")
-        config.add(f"ip tunnel intrusion detection in default off")
+        config.add("ip tunnel intrusion detection in default off")
 
         # トンネルインタフェースのフィルタリング設定 (IN)
         # 参考: https://network.yamaha.com/setting/router_firewall/security/wan_side/ip_filter_wizard_explain-nvr500
@@ -227,14 +218,14 @@ with config.section("DHCP"):
     DHCP_SCOPE_GUEST = 2  # ゲストネットワーク
 
     # DHCP サーバを動作させる設定
-    config.add(f"dhcp service server")
+    config.add("dhcp service server")
 
     # DHCP で払い出すアドレス範囲の設定
     config.add(f"dhcp scope {DHCP_SCOPE} {addr_range(LAN_ADDR, 2, 249)}")
     config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {addr_range(LAN_GUEST_ADDR, 2, 249)}")
 
     # クライアント識別に Client-Identifier を使用しない
-    config.add(f"dhcp server rfc2131 compliant except use-clientid")
+    config.add("dhcp server rfc2131 compliant except use-clientid")
 
     # DHCP 固定割り当て
     config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[4]} 2c:cf:67:11:40:cd")  # Raspberry Pi 5 (Wi-Fi)
@@ -248,13 +239,13 @@ with config.section("DNS"):
     config.add(f"dns host {LAN_IF} {LAN_GUEST_IF}")
 
     # 名前解決は IPv6 を優先し、IPv6 で名前解決できない場合に IPv4 へフォールバックする
-    config.add(f"dns service fallback on")
+    config.add("dns service fallback on")
 
     # WAN の DHCP から DNS サーバのアドレスを取得して問い合わせに使用する
     config.add(f"dns server dhcp {WAN_IF} edns=on")
 
     # プライベートアドレスに対する問い合わせを上位サーバに転送しない
-    config.add(f"dns private address spoof on")
+    config.add("dns private address spoof on")
 
 # メール通知設定
 with config.section("Mail"):
@@ -277,65 +268,6 @@ with config.section("Mail"):
     config.add(f"mail notify 2 {MAIL_TEMPLATE_ID} trigger intrusion * in/out")  # 不正アクセス検知
     config.add(f"mail notify 3 {MAIL_TEMPLATE_ID} trigger status interface")  # 本体状態の手動通知
 
-# TODO: VPN 接続時にインターネットにアクセスできなくなる問題が解決していない (詳細は memo.md を参照)
-with config.section("VPN"):
-    VPN_CLIENTS = environ["VPN_CLIENTS"].split(",")
-    VPN_PSK = environ["VPN_PSK"]
-    VPN_GW_ID_DOMAIN = environ["VPN_GW_ID_DOMAIN"]
-
-    # VPN クライアントに割り当てる IP アドレス範囲を設定
-    VPN_ADDR_POOL_ID = 1
-    config.add(f"ipsec ike mode-cfg address pool {VPN_ADDR_POOL_ID} {addr_range(LAN_ADDR, 250, 254)}")
-
-    for vpn_client_name in VPN_CLIENTS:
-        TUNNEL_INTERFACE_ID = next(interface_counter)
-        # セキュアゲートウェイ ID はトンネルインタフェース番号と同じものを使うことにする
-        # ※ セキュアゲートウェイ ID はトンネルインタフェース番号はいずれも機器ごとに上限が決まっている (どうやら「VPN対地数」のことらしく、NVR700W の場合は 20)
-        #   → https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/ipsec/ipsec_chapter.html
-        SECURE_GW_ID = TUNNEL_INTERFACE_ID
-        # SA ポリシー ID はトンネルインタフェース番号と同じものを使うことにする (本来同じである必要はないが)
-        SA_POLICY_ID = TUNNEL_INTERFACE_ID
-
-        # VPN クライアントごとに IPsec トンネルを作成する
-        with config.interface("tunnel", TUNNEL_INTERFACE_ID):
-            config.add(f"description tunnel {vpn_client_name}")
-            config.add("tunnel encapsulation ipsec")
-
-            # TCP の MSS をトンネルの MTU に合わせて自動調整する (ESP と MAP-E の二重カプセル化対策)
-            config.add("ip tunnel tcp mss limit auto")
-
-            # SA ポリシーを定義し、暗号化と認証の方式として ESP を設定する
-            # ※ SA (Security Association) は IPsec 接続のこと
-            config.add(f"ipsec sa policy {SA_POLICY_ID} {SECURE_GW_ID} esp")
-
-            # トンネルで使用する SA のポリシーを設定する
-            config.add(f"ipsec tunnel {SA_POLICY_ID}")
-
-            # IKE の鍵交換を自動で開始しない (クライアント側から接続するので)
-            config.add(f"ipsec auto refresh {SA_POLICY_ID} off")
-
-            # セキュアゲートウェイで使用する IKE のバージョンを設定する
-            config.add(f"ipsec ike version {SECURE_GW_ID} 2")
-
-            # IKE キープアライブのログ出力を無効にする
-            config.add(f"ipsec ike keepalive log {SECURE_GW_ID} off")
-
-            # IKE キープアライブの設定 (10秒間隔で送信し、3回届かなかったら障害とみなす)
-            config.add(f"ipsec ike keepalive use {SECURE_GW_ID} on rfc4306 10 3")
-
-            # 自分側のセキュアゲートウェイの ID として FQDN を設定する
-            config.add(f"ipsec ike local name {SECURE_GW_ID} {VPN_GW_ID_DOMAIN} fqdn")
-
-            # 事前共有鍵 (PSK) を設定する
-            config.add(f"ipsec ike pre-shared-key {SECURE_GW_ID} text {VPN_PSK}")
-
-            # 相手側のセキュアゲートウェイの ID としてユーザ FQDN を設定する
-            config.add(f"ipsec ike remote name {SECURE_GW_ID} {vpn_client_name}@{VPN_GW_ID_DOMAIN} user-fqdn")
-
-            # IPsec クライアントに内部 IP アドレスを割り当てる際のアドレスプールを設定する
-            config.add(f"ipsec ike mode-cfg address {SECURE_GW_ID} {VPN_ADDR_POOL_ID}")
-
-
 # その他
 with config.section("Other"):
     # Syslog を NAS に保存
@@ -356,10 +288,6 @@ with config.section("Other"):
     # トラフィックと NAT のデータを取る
     config.add("statistics traffic on")
     config.add("statistics nat on")
-
-    # ネットボランチ DNS を設定
-    NETVOLANTE_DNS_HOST = environ["NETVOLANTE_DNS_HOST"]
-    config.add(f"netvolante-dns hostname host {WAN_IF} {NETVOLANTE_DNS_HOST} ipv6 address")
 
 if __name__ == "__main__":
     print(config.build())
