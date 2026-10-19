@@ -9,6 +9,14 @@ config = YamahaRouterConfigBuilder("NVR700W")
 LAN_ADDR = IPv4Network("192.168.57.0/24")
 LAN_GUEST_ADDR = IPv4Network("192.168.2.0/24")
 
+PRIVATE_ADDRS = [
+    IPv4Network("10.0.0.0/8"),
+    IPv4Network("172.16.0.0/12"),
+    IPv4Network("192.168.0.0/16"),
+    IPv4Network("100.64.0.0/10"),  # CGNAT
+    IPv4Network("169.254.0.0/16"),  # リンクローカル
+]
+
 LAN_IF = "lan1"
 LAN_GUEST_IF = "lan1/1"
 WAN_IF = "onu1"
@@ -192,14 +200,25 @@ with config.section("VLAN"):
     config.add(f"vlan {LAN_GUEST_IF} 802.1q vid={VLAN_ID} name={VLAN_NAME}")
     config.add(f"ip {LAN_GUEST_IF} address {LAN_GUEST_ADDR[1]}/{LAN_GUEST_ADDR.prefixlen}")
 
-    # ゲストネットワークからプライベートアドレスへのアクセスを拒否
+    # ゲストネットワークからはルータへの DNS / DHCP とインターネットへのアクセスのみ許可
     config.ip_filter(
         LAN_GUEST_IF,
         "in",
         static=[
-            f"reject {LAN_GUEST_ADDR} {LAN_ADDR}",
-            "pass * * * * *",
+            f"pass {LAN_GUEST_ADDR} {LAN_GUEST_ADDR[1]} udp,tcp * domain",
+            # DHCP の最初の要求は 0.0.0.0 → 255.255.255.255 で送られるため送信元・宛先とも * にする
+            "pass * * udp bootpc bootps",
+            *[f"reject * {addr} * * *" for addr in PRIVATE_ADDRS],
+            f"pass {LAN_GUEST_ADDR} * * * *",
         ],
+    )
+
+    # メインネットワークからゲストネットワークへの通信の戻りパケットを動的フィルタで通す
+    config.ip_filter(
+        LAN_GUEST_IF,
+        "out",
+        static=["pass * * * * *"],
+        dynamic=["* * tcp", "* * udp", "* * ping"],
     )
 
 # DHCP 設定
