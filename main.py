@@ -273,6 +273,9 @@ with config.section("Other"):
     # Syslog を NAS に保存
     config.add(f"syslog host {LAN_ADDR[8]}")
 
+    # NOTICE レベルのログ (IP フィルタで reject したパケットなど) を出力する
+    config.add("syslog notice on")
+
     # 管理画面へのアクセスは LAN からのみ許可する (ゲストネットワークからは許可しない)
     config.add(f"httpd host {LAN_IF}")
 
