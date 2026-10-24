@@ -198,7 +198,8 @@ with config.section("VLAN"):
         static=[
             f"pass {LAN_GUEST_ADDR} {LAN_GUEST_ADDR[1]} udp,tcp * domain",
             # DHCP の最初の要求は 0.0.0.0 → 255.255.255.255 で送られるため送信元・宛先とも * にする
-            "pass * * udp bootpc bootps",
+            # bootpc / bootps のニーモニックは受け付けられないためポート番号で指定する
+            "pass * * udp 68 67",
             *[f"reject * {addr} * * *" for addr in PRIVATE_ADDRS],
             f"pass {LAN_GUEST_ADDR} * * * *",
         ],
@@ -223,6 +224,9 @@ with config.section("DHCP"):
     # DHCP で払い出すアドレス範囲の設定
     config.add(f"dhcp scope {DHCP_SCOPE} {addr_range(LAN_ADDR, 2, 249)}")
     config.add(f"dhcp scope {DHCP_SCOPE_GUEST} {addr_range(LAN_GUEST_ADDR, 2, 249)}")
+
+    # ゲストに通知する DNS サーバをゲスト側のルータアドレスにする (デフォルトではメイン側のアドレスになる)
+    config.add(f"dhcp scope option {DHCP_SCOPE_GUEST} dns={LAN_GUEST_ADDR[1]}")
 
     # クライアント識別に Client-Identifier を使用しない
     config.add("dhcp server rfc2131 compliant except use-clientid")
