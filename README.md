@@ -17,5 +17,5 @@ services:
 ```
 
 ## Usage
-1. `python devices/RTX1300.py > config.txt`
+1. `python src/RTX1300.py > config.txt`
 2. Import the file into your router
