@@ -1,5 +1,6 @@
-from ipaddress import IPv4Network
+from ipaddress import IPv4Address, IPv4Network
 from os import environ
+from typing import NamedTuple
 
 from yamaha_router_config_builder import YamahaRouterConfigBuilder
 from yamaha_router_config_builder.utils import addr_range, counter
@@ -27,6 +28,21 @@ IPIP6_TUNNEL_ID = next(interface_counter)
 
 # 不正アクセス検知するタイプ
 IDS_TYPES = ["ip", "ip-option", "fragment", "icmp", "udp", "tcp"]
+
+
+class Device(NamedTuple):
+    mac_addr: str
+    ipv4_addr: IPv4Address
+
+
+# ネットワークに接続されるデバイスと設定
+DEVICES: list[Device] = [
+    Device("2c:cf:67:11:40:cd", LAN_ADDR[4]),  # Raspberry Pi 5 (Wi-Fi)
+    Device("18:c0:4d:dd:e2:40", LAN_ADDR[5]),  # EVOLV
+    Device("20:0b:74:c5:dc:aa", LAN_ADDR[6]),  # プリンタ
+    Device("90:09:d0:56:a3:b4", LAN_ADDR[8]),  # NAS
+]
+
 
 with config.section("User"):
     # ログインパスワード設定
@@ -232,10 +248,8 @@ with config.section("DHCP"):
     config.add("dhcp server rfc2131 compliant except use-clientid")
 
     # DHCP 固定割り当て
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[4]} 2c:cf:67:11:40:cd")  # Raspberry Pi 5 (Wi-Fi)
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[5]} 18:c0:4d:dd:e2:40")  # EVOLV
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[6]} 20:0b:74:c5:dc:aa")  # プリンタ
-    config.add(f"dhcp scope bind {DHCP_SCOPE} {LAN_ADDR[8]} 90:09:d0:56:a3:b4")  # NAS
+    for device in DEVICES:
+        config.add(f"dhcp scope bind {DHCP_SCOPE} {device.ipv4_addr} {device.mac_addr}")
 
 # DNS 設定
 with config.section("DNS"):
