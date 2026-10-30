@@ -33,6 +33,7 @@ IDS_TYPES = ["ip", "ip-option", "fragment", "icmp", "udp", "tcp"]
 class Device(NamedTuple):
     mac_addr: str
     ipv4_addr: IPv4Address
+    fqdn: str | None = None
 
 
 # ネットワークに接続されるデバイスと設定
@@ -40,7 +41,7 @@ DEVICES: list[Device] = [
     Device("2c:cf:67:11:40:cd", LAN_ADDR[4]),  # Raspberry Pi 5 (Wi-Fi)
     Device("18:c0:4d:dd:e2:40", LAN_ADDR[5]),  # EVOLV
     Device("20:0b:74:c5:dc:aa", LAN_ADDR[6]),  # プリンタ
-    Device("90:09:d0:56:a3:b4", LAN_ADDR[8]),  # NAS
+    Device("90:09:d0:56:a3:b4", LAN_ADDR[8], "nas.y32.jp"),  # NAS
 ]
 
 
@@ -264,6 +265,11 @@ with config.section("DNS"):
 
     # プライベートアドレスに対する問い合わせを上位サーバに転送しない
     config.add("dns private address spoof on")
+
+    # FQDN が指定されているデバイスに対しては静的 DNS レコードを登録する
+    for device in DEVICES:
+        if device.fqdn:
+            config.add(f"dns static a {device.fqdn} {device.ipv4_addr}")
 
 # メール通知設定
 with config.section("Mail"):
