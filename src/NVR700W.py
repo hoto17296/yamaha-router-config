@@ -42,6 +42,9 @@ DEVICES: list[Device] = [
     Device("18:c0:4d:dd:e2:40", LAN_ADDR[5]),  # EVOLV
     Device("20:0b:74:c5:dc:aa", LAN_ADDR[6]),  # プリンタ
     Device("90:09:d0:56:a3:b4", LAN_ADDR[8], "nas.y32.jp"),  # NAS
+    # 以下、Proxmox VE 内の仮想マシン
+    Device("bc:24:11:8c:1f:64", LAN_ADDR[201], "apps.y32.jp"),
+    Device("bc:24:11:83:d7:ec", LAN_ADDR[202], "ai.y32.jp"),
 ]
 
 
