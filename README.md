@@ -9,7 +9,6 @@ services:
   workspace:
     environment:
       USER_PASSWORD:
-      ADMIN_PASSWORD:
       SMTP_HOST:
       SMTP_USERNAME:
       SMTP_PASSWORD:

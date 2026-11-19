@@ -5,7 +5,7 @@ from typing import NamedTuple
 from yamaha_router_config_builder import YamahaRouterConfigBuilder
 from yamaha_router_config_builder.utils import addr_range, counter
 
-config = YamahaRouterConfigBuilder("NVR700W")
+config = YamahaRouterConfigBuilder("RTX1300")
 
 LAN_ADDR = IPv4Network("192.168.57.0/24")
 LAN_GUEST_ADDR = IPv4Network("192.168.2.0/24")
@@ -20,7 +20,7 @@ PRIVATE_ADDRS = [
 
 LAN_IF = "lan1"
 LAN_GUEST_IF = "lan1/1"
-WAN_IF = "onu1"
+WAN_IF = "lan2"
 WAN_PREFIX = f"dhcp-prefix@{WAN_IF}"
 
 interface_counter = counter(1)
@@ -47,14 +47,24 @@ DEVICES: list[Device] = [
     Device("bc:24:11:83:d7:ec", LAN_ADDR[202], "ai.y32.jp"),
 ]
 
-
 with config.section("User"):
-    # ログインパスワード設定
-    config.add(f"login password {environ['USER_PASSWORD']}")
-    config.add(f"administrator password {environ['ADMIN_PASSWORD']}")
+    USER_NAME = environ.get("USER_NAME", "admin")
 
-    # ログインセッションの期限を1時間に設定
-    config.add(f"user attribute login-timer={60 * 60}")
+    # ログインユーザのパスワードを設定
+    config.add(f"login user {USER_NAME} {environ['USER_PASSWORD']}")
+
+    # ログインユーザの設定
+    user_attrs = {
+        "administrator": "2",  # 管理パスワードの入力なしで昇格できる
+        "login-timer": 60 * 60,  # ログインセッションは1時間で切れる
+    }
+    config.add(f"user attribute {USER_NAME} {' '.join([f'{k}={v}' for k, v in user_attrs.items()])}")
+
+    # 管理パスワードを設定
+    # 「ログインユーザのパスワード」とは別物で、ユーザが administrator コマンドで昇格する際に使うパスワード
+    # 上記で作成したログインユーザは管理パスワードの入力なしで昇格できるため、通常はこの管理パスワードは使用されない
+    # しかし何かは設定しないとログイン時に警告が出るため、とりあえずログインユーザのパスワードと同じ値を設定する
+    config.add(f"administrator password {environ['USER_PASSWORD']}")
 
 with config.section("Route"):
     # IPv4 デフォルト経路設定
@@ -218,8 +228,7 @@ with config.section("VLAN"):
         static=[
             f"pass {LAN_GUEST_ADDR} {LAN_GUEST_ADDR[1]} udp,tcp * domain",
             # DHCP の最初の要求は 0.0.0.0 → 255.255.255.255 で送られるため送信元・宛先とも * にする
-            # bootpc / bootps のニーモニックは受け付けられないためポート番号で指定する
-            "pass * * udp 68 67",
+            "pass * * udp dhcpc dhcps",
             *[f"reject * {addr} * * *" for addr in PRIVATE_ADDRS],
             f"pass {LAN_GUEST_ADDR} * * * *",
         ],
